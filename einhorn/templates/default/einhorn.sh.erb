@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+
+SOCKET_PATH="<%= @deploy[:deploy_to] %>/shared/sockets/einhorn.sock"
+PID_PATH="<%= @deploy[:deploy_to] %>/shared/pids/einhorn.pid"
+LOG_PATH="<%= @deploy[:deploy_to] %>/shared/log/einhorn.log"
+EXEC_CMD="<%= @deploy[:deploy_to] %>/current/<%= @application %>"
+EXEC_ARGS="--config <%= @deploy[:deploy_to] %>/shared/config/config.toml"
+
+start() {
+        einhorn -b 0.0.0.0:8000,r -d $SOCKET_PATH -e $PID_PATH -m manual $EXEC_CMD $EXEC_ARGS >> $LOG_PATH 2>&1 &
+}
+
+stop() {
+        einhornsh -d $SOCKET_PATH -e die
+}
+
+restart() {
+        if [ ! -f $PID_PATH ] || ! kill -0 $(cat $PID_PATH); then
+            start
+        else
+            einhornsh -d $SOCKET_PATH -e upgrade
+        fi
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart|reload)
+        restart
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|reload}"
+        exit 1
+esac
+exit 0
